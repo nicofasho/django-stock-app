@@ -1,3 +1,8 @@
+import requests
+import json
+
+import urllib.parse
+
 from django.shortcuts import redirect, render
 from .models import Stock
 from .forms import StockForm
@@ -5,9 +10,6 @@ from django.contrib import messages
 
 
 def home(request):
-    import requests
-    import json
-
     if request.method == 'POST':
         ticker = request.POST['ticker']
         api_request = requests.get(
@@ -40,11 +42,26 @@ def add_stock(request):
             return redirect('add_stock')
     else:
         ticker = Stock.objects.all()
-        return render(request, 'add_stock.html', {'ticker': ticker})
+        output = []
+
+        for item in ticker:
+            api_request = requests.get(f'https://cloud.iexapis.com/stable/stock/{item.ticker}/quote?token=pk_c06698a456be48b3926f6f4d439a8141')
+
+            try:
+                api = json.loads(api_request.content)
+                output.append(api)
+            except Exception as e:
+                api = 'Error...'
+
+        return render(request, 'add_stock.html', {'ticker': ticker, 'output': output})
 
 
 def delete(request, stock_id):
     item = Stock.objects.get(pk=stock_id)
     item.delete()
     messages.success(request, ("Stock Has Been Deleted!"))
-    return redirect(add_stock)
+    return redirect(delete_stock)
+
+def delete_stock(request):
+    ticker = Stock.objects.all()
+    return render(request, 'delete_stock.html', {'ticker': ticker})
